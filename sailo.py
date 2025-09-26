@@ -144,7 +144,7 @@ with tab4:
         with colB:
             mc = st.number_input(f"Monthly (${i})", min_value=0.0, value=monthly_contribution, key=f"mc_{i}")
         with colC:
-            ar = st.slider(f"Return % ({i})", 0.0, 20.0, int(annual_return*100), key=f"ar_{i}") / 100
+            ar = st.slider(f"Return % ({i})", 0.0, 20.0, float(annual_return*100), key=f"ar_{i}") / 100
         with colD:
             tg = st.number_input(f"Goal (${i})", min_value=1000.0, value=target_goal, key=f"tg_{i}")
 
