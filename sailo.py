@@ -117,6 +117,40 @@ with tab2:
         st.info(f"Increase your monthly contribution by ${suggested_contribution:,.2f} to reach your goal in {months} months.")
     else:
         st.success("🎉 You are on track to meet or exceed your goal!")
+    # ----------------------------
+# Tab 2: What You Can Do
+# ----------------------------
+with tab2:
+    st.header("💡 What You Can Do")
+    main_forecast = simulate_savings(starting_balance, monthly_contribution, annual_return, months)
+    final_balance = main_forecast[-1]
+    progress = final_balance / target_goal
+
+    if progress < 1.0:
+        needed_balance = target_goal - final_balance
+        suggested_contribution = needed_balance / months
+        st.info(f"Increase your monthly contribution by ${suggested_contribution:,.2f} to reach your goal in {months} months.")
+    else:
+        st.success("🎉 You are on track to meet or exceed your goal!")
+
+    # Quick Wins Module
+        st.markdown("### ⚡ Quick Wins")
+        st.markdown(f"""
+    - 🪙 **One-Time Boost**: Add a lump sum of **$1,000** now to reduce your timeline by ~2 months.
+    - ✂️ **Cut Expenses**: Redirect **$50/month** from discretionary spending to savings.
+    - 🔄 **Round-Up Auto-Save**: Enable micro-savings from daily purchases.
+    - 📊 **Peer Benchmark**: You're ahead of **72%** of users in your bracket.
+    """)
+
+    # Deep Optimization Module
+        st.markdown("### 🧠 Deep Optimization")
+        st.markdown(f"""
+    - 📈 **Rebalance Portfolio**: Consider shifting **10–15%** to growth assets.
+    - 🧾 **Tax Efficiency**: Use **Roth IRA** or **HSA** to reduce future tax burden.
+    - 💳 **Debt Strategy**: Pay off high-interest loans first to save **$300+** over 6 months.
+    - 💸 **Fee Scan**: Review fund expense ratios—switching could improve returns.
+    """)
+
 
 # ----------------------------
 # Tab 3: Forecast
