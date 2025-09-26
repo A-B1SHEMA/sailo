@@ -1,107 +1,69 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib import colors
-import io
-import random
+import plotly.express as px
 
 # ----------------------------
-# Utility Functions
+# Helper Function: Simulate Savings
 # ----------------------------
 def simulate_savings(starting_balance, monthly_contribution, annual_return, months):
-    """Simple compound growth simulation"""
-    balance = starting_balance
-    history = []
-    for m in range(months):
-        balance += monthly_contribution
-        balance *= (1 + annual_return / 12)
-        history.append(balance)
-    return history
-
-def generate_pdf_report(main_forecast, target_goal, progress, scenario_results, scenario_inputs):
-    """Generate PDF report with results"""
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer)
-    styles = getSampleStyleSheet()
-    story = []
-
-    # Title
-    story.append(Paragraph("💰 Sailo Decision Support Report", styles["Title"]))
-    story.append(Spacer(1, 12))
-
-    # Personalized Recommendation
-    story.append(Paragraph("Personalized Recommendation", styles["Heading2"]))
-    final_balance = main_forecast[-1]
-    story.append(Paragraph(f"Final Balance: ${final_balance:,.2f}", styles["Normal"]))
-    story.append(Paragraph(f"Target Goal: ${target_goal:,.2f}", styles["Normal"]))
-    story.append(Paragraph(f"Goal Achievement: {progress*100:.1f}%", styles["Normal"]))
-    story.append(Spacer(1, 12))
-
-    # What-If Scenarios
-    story.append(Paragraph("What-If Scenarios", styles["Heading2"]))
-    table_data = [["Scenario", "Final Balance", "Target Goal", "Achievement %"]]
-    for scenario in scenario_results:
-        target_goal = scenario_inputs[int(scenario["Scenario"][-1]) - 1]["TargetGoal"]
-        progress = scenario["FinalBalance"] / target_goal
-        table_data.append([
-            scenario["Scenario"],
-            f"${scenario['FinalBalance']:,.2f}",
-            f"${target_goal:,.2f}",
-            f"{progress*100:.1f}%"
-        ])
-
-    table = Table(table_data, hAlign="LEFT", colWidths=[100, 120, 120, 100])
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.lightblue),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-    ]))
-    story.append(table)
-
-    doc.build(story)
-    buffer.seek(0)
-    return buffer
+    balances = [starting_balance]
+    for _ in range(months):
+        new_balance = balances[-1] * (1 + annual_return / 12) + monthly_contribution
+        balances.append(new_balance)
+    return balances
 
 # ----------------------------
-# Streamlit Layout
+# Streamlit App Layout
 # ----------------------------
-st.set_page_config(page_title="💰 Sailo DSS", layout="wide")
-st.title("💰 Sailo Decision Support System")
+st.set_page_config(page_title="Smart Savings Dashboard", layout="wide")
+
+st.title("📊 Smart Savings Dashboard")
+st.markdown("Track your savings growth, explore what-if scenarios, and get actionable suggestions to hit your goals.")
 
 # ----------------------------
-# Default Inputs
+# User Inputs
 # ----------------------------
-months = 12
-starting_balance = 1000.0
-monthly_contribution = 500.0
-annual_return = 0.05
-target_goal = 10000.0
+col1, col2, col3 = st.columns(3)
+with col1:
+    starting_balance = st.number_input("Starting Balance ($)", min_value=0, value=5000, step=100)
+with col2:
+    monthly_contribution = st.number_input("Monthly Contribution ($)", min_value=0, value=500, step=50)
+with col3:
+    annual_return = st.number_input("Expected Annual Return (%)", min_value=0.0, value=5.0, step=0.5) / 100
+
+col4, col5 = st.columns(2)
+with col4:
+    months = st.number_input("Investment Horizon (Months)", min_value=1, value=120, step=12)
+with col5:
+    target_goal = st.number_input("Target Goal ($)", min_value=0, value=50000, step=1000)
+
+debt_amount = st.number_input("Outstanding Debt ($)", min_value=0, value=10000, step=500)
 
 # ----------------------------
 # Tabs
 # ----------------------------
-tab1, tab2, tab3, tab4 = st.tabs([
-    "1️⃣ Inputs",
-    "2️⃣ What You Can Do",
-    "3️⃣ Forecast",
-    "4️⃣ What-If Scenario"
-])
+tab1, tab2, tab3 = st.tabs(["📈 Forecast", "💡 What You Can Do", "🎯 Personalized Recommendation"])
 
 # ----------------------------
-# Tab 1: Inputs
+# Tab 1: Forecast
 # ----------------------------
 with tab1:
-    st.header("📥 Inputs")
-    starting_balance = st.number_input("Starting Balance ($)", min_value=0.0, value=starting_balance)
-    monthly_contribution = st.number_input("Monthly Contribution ($)", min_value=0.0, value=monthly_contribution)
-    annual_return = st.slider("Expected Annual Return (%)", 0.0, 20.0, float(annual_return*100)) / 100
-    target_goal = st.number_input("Target Goal ($)", min_value=1000.0, value=target_goal)
-    months = st.number_input("Months", min_value=1, value=months)
+    st.header("📈 Savings Forecast")
+    main_forecast = simulate_savings(starting_balance, monthly_contribution, annual_return, months)
+
+    df = pd.DataFrame({
+        "Month": np.arange(0, months + 1),
+        "Balance": main_forecast
+    })
+
+    fig = px.line(df, x="Month", y="Balance", title="Projected Savings Growth", markers=True)
+    st.plotly_chart(fig, use_container_width=True)
+
+    final_balance = main_forecast[-1]
+    st.metric("Final Balance", f"${final_balance:,.2f}")
+    st.metric("Target Goal", f"${target_goal:,.2f}")
+    st.metric("Progress", f"{(final_balance / target_goal) * 100:.2f}%")
 
 # ----------------------------
 # Tab 2: What You Can Do
@@ -111,7 +73,6 @@ with tab2:
     main_forecast = simulate_savings(starting_balance, monthly_contribution, annual_return, months)
     final_balance = main_forecast[-1]
     progress = final_balance / target_goal
-    gap = max(target_goal - final_balance, 0)
 
     if progress < 1.0:
         needed_balance = target_goal - final_balance
@@ -122,115 +83,35 @@ with tab2:
 
     # Quick Wins Module
     st.markdown("### ⚡ Quick Wins")
-    boost = min(1000, gap * 0.2) if gap > 0 else 0
-    months_saved = int(boost / monthly_contribution) if monthly_contribution > 0 else 0
-    benchmark = random.randint(60, 90)
-
     st.markdown(f"""
-    - 🪙 **One-Time Boost**: Add a lump sum of **${boost:,.0f}** now to reduce your timeline by ~{months_saved} months.
+    - 🪙 **One-Time Boost**: Add a lump sum of **$1,000** now to reduce your timeline by ~2 months.
     - ✂️ **Cut Expenses**: Redirect **$50/month** from discretionary spending to savings.
     - 🔄 **Round-Up Auto-Save**: Enable micro-savings from daily purchases.
-    - 📊 **Peer Benchmark**: You're ahead of **{benchmark}%** of users in your bracket.
+    - 📊 **Peer Benchmark**: You're ahead of **72%** of users in your bracket.
     """)
 
     # Deep Optimization Module
     st.markdown("### 🧠 Deep Optimization")
-    debt_balance = st.number_input("Debt Balance ($)", min_value=0.0, value=0.0, key="debt_balance")
-
-    st.markdown("""
+    st.markdown(f"""
     - 📈 **Rebalance Portfolio**: Consider shifting **10–15%** to growth assets.
     - 🧾 **Tax Efficiency**: Use **Roth IRA** or **HSA** to reduce future tax burden.
+    - 💳 **Debt Strategy**: You currently have **${debt_amount:,.2f}** in outstanding debt. Paying this off first could save you **hundreds** in interest.
     - 💸 **Fee Scan**: Review fund expense ratios—switching could improve returns.
     """)
 
-    if debt_balance > 0:
-        st.markdown("- 💳 **Debt Strategy**: Pay off high-interest loans first to save big on interest.")
-
-    # Visual Gauge for Quick Wins Impact
-    quick_win_gain = boost + (50 * months)
-    if gap > 0:
-        fig = go.Figure(go.Indicator(
-            mode="gauge+number",
-            value=min(quick_win_gain / gap * 100, 100),
-            title={"text": "Gap Closed with Quick Wins (%)"},
-            gauge={"axis": {"range": [0, 100]}}
-        ))
-        st.plotly_chart(fig, use_container_width=True)
-
 # ----------------------------
-# Tab 3: Forecast
+# Tab 3: Personalized Recommendation
 # ----------------------------
 with tab3:
-    st.header("📈 Forecast: Growth Over Time")
+    st.header("🎯 Personalized Recommendation")
     main_forecast = simulate_savings(starting_balance, monthly_contribution, annual_return, months)
+    final_balance = main_forecast[-1]
+    progress = final_balance / target_goal
 
-    months_list = list(range(1, months+1))
-    contributions = np.cumsum([monthly_contribution]*months) + starting_balance
-    interest = [balance - contrib for balance, contrib in zip(main_forecast, contributions)]
+    if progress >= 1.0:
+        st.success(f"🎉 Excellent! Your projected balance of **${final_balance:,.2f}** meets your goal of **${target_goal:,.2f}**.")
+    else:
+        needed_balance = target_goal - final_balance
+        st.warning(f"⚠️ You are projected to fall short by **${needed_balance:,.2f}**.")
+        st.info(f"To close the gap, increase monthly contributions by **${needed_balance / months:,.2f}** or extend your horizon by a few years.")
 
-    df_forecast = pd.DataFrame({
-        "Month": months_list,
-        "Contributions": contributions,
-        "Interest": interest,
-        "Total Balance": main_forecast
-    }).set_index("Month")
-
-    st.subheader("Balance Breakdown")
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df_forecast.index, y=df_forecast["Contributions"],
-                             mode='lines', name='Contributions', fill='tonexty'))
-    fig.add_trace(go.Scatter(x=df_forecast.index, y=df_forecast["Total Balance"],
-                             mode='lines', name='Total Balance', fill='tonexty'))
-    fig.update_layout(yaxis_title="Balance ($)", xaxis_title="Month", template="plotly_white")
-    st.plotly_chart(fig, use_container_width=True)
-
-    st.subheader("Progress toward your goal")
-    st.progress(min(final_balance/target_goal, 1.0))
-    st.write(f"Your final projected balance: ${final_balance:,.2f}")
-    st.write(f"Target goal: ${target_goal:,.2f}")
-    st.write(f"Goal achievement: {progress*100:.1f}%")
-
-# ----------------------------
-# Tab 4: What-If Scenario
-# ----------------------------
-with tab4:
-    st.header("🔍 What-If Scenarios")
-    scenario_inputs = []
-    scenario_results = []
-
-    for i in range(1, 4):
-        st.subheader(f"Scenario {i}")
-        colA, colB, colC, colD = st.columns(4)
-        with colA:
-            sb = st.number_input(f"Start (${i})", min_value=0.0, value=starting_balance, key=f"sb_{i}")
-        with colB:
-            mc = st.number_input(f"Monthly (${i})", min_value=0.0, value=monthly_contribution, key=f"mc_{i}")
-        with colC:
-            ar = st.slider(f"Return % ({i})", 0.0, 20.0, float(annual_return*100), key=f"ar_{i}") / 100
-        with colD:
-            tg = st.number_input(f"Goal (${i})", min_value=1000.0, value=target_goal, key=f"tg_{i}")
-
-        scenario_inputs.append({
-            "StartingBalance": sb,
-            "MonthlyContribution": mc,
-            "AnnualReturn": ar,
-            "TargetGoal": tg,
-        })
-
-        forecast = simulate_savings(sb, mc, ar, months)
-        scenario_results.append({
-            "Scenario": f"Scenario {i}",
-            "FinalBalance": forecast[-1]
-        })
-
-    scenario_df = pd.DataFrame({
-        "Scenario": [f"Scenario {i}" for i in range(1, 4)],
-        "Final Balance": [r["FinalBalance"] for r in scenario_results],
-        "Target Goal": [si["TargetGoal"] for si in scenario_inputs],
-        "Achievement %": [r["FinalBalance"] / si["TargetGoal"] * 100 for r, si in zip(scenario_results, scenario_inputs)]
-    })
-    st.dataframe(scenario_df)
-
-    # Direct download button for PDF report
-    pdf = generate_pdf_report(main_forecast, target_goal, progress, scenario_results, scenario_inputs)
-    st.download_button("📄 Download PDF Report", data=pdf, file_name="sailo_report.pdf", mime="application/pdf")
