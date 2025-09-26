@@ -92,7 +92,7 @@ st.set_page_config(page_title="💰 Sailo", layout="wide")
 # ----------------------------
 # Sidebar Inputs with Logo
 # ----------------------------
-st.sidebar.markdown('<img src="logo.png" width="120">', unsafe_allow_html=True)  # Sidebar logo
+st.sidebar.image("logo.png", width=120)  # Sidebar logo
 st.sidebar.header("Your Inputs")
 starting_balance = st.sidebar.number_input("Starting Balance ($)", value=5000, step=500)
 monthly_contribution = st.sidebar.number_input("Monthly Contribution ($)", value=500, step=50)
@@ -111,7 +111,7 @@ extra_cash = st.sidebar.number_input("Extra Cash Available ($/month)", value=100
 # ----------------------------
 col1, col2 = st.columns([1, 5])
 with col1:
-    st.markdown('<img src="logo.png" width="100">', unsafe_allow_html=True)  # Main page logo
+    st.image("logo.png", width=100)  # Main page logo
 with col2:
     st.markdown("<h1>💰 Sailo Decision Support System</h1>", unsafe_allow_html=True)
     st.markdown("Plan, optimize, and accelerate your savings goals with debt & investment insights.")
