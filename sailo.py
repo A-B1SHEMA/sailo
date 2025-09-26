@@ -3,10 +3,66 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 import io
+
+# ----------------------------
+# Custom CSS for Sailo branding
+# ----------------------------
+st.markdown("""
+<style>
+/* Sidebar header color and font */
+[data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
+    color: #1f77b4;  /* Logo blue */
+    font-family: 'Helvetica', sans-serif;
+}
+
+/* Sidebar number inputs style */
+[data-testid="stSidebar"] .stNumberInput>div>div>input {
+    border-radius: 5px;
+    border: 1px solid #1f77b4;
+    padding: 5px;
+}
+
+/* Tabs styling */
+.css-1v3fvcr {
+    background-color: #f0f8ff; /* light blue background */
+    border-radius: 10px;
+}
+
+/* Metrics styling */
+.stMetricValue {
+    color: #1f77b4;
+    font-weight: bold;
+}
+
+.stMetricLabel {
+    color: #333333;
+    font-size: 14px;
+}
+
+/* Buttons styling */
+.stButton>button {
+    background-color: #1f77b4;
+    color: white;
+    border-radius: 5px;
+    padding: 8px 16px;
+    font-weight: bold;
+}
+
+.stButton>button:hover {
+    background-color: #155d8b;
+}
+
+/* Info box color */
+.stInfo {
+    background-color: #e6f2ff;
+    border-left: 4px solid #1f77b4;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ----------------------------
 # Helper Functions
@@ -33,6 +89,12 @@ def generate_pdf_report(main_forecast, target_goal, debt_amount, min_debt_paymen
     doc = SimpleDocTemplate(buffer)
     styles = getSampleStyleSheet()
     story = []
+
+    # Add logo
+    logo = "logo.png"
+    im = Image(logo, width=100, height=100)
+    story.append(im)
+    story.append(Spacer(1, 12))
 
     # Title
     story.append(Paragraph("💰 Sailo Decision Support Report", styles["Title"]))
@@ -89,36 +151,30 @@ def generate_pdf_report(main_forecast, target_goal, debt_amount, min_debt_paymen
 # ----------------------------
 st.set_page_config(page_title="💰 Sailo", layout="wide")
 
-# ----------------------------
-# Sidebar Inputs with Logo
-# ----------------------------
-st.sidebar.image("logo.png", width=120)  # Sidebar logo
+# Sidebar with logo
+st.sidebar.image("logo.png", width=120)
 st.sidebar.header("Your Inputs")
 starting_balance = st.sidebar.number_input("Starting Balance ($)", value=5000, step=500)
 monthly_contribution = st.sidebar.number_input("Monthly Contribution ($)", value=500, step=50)
-annual_return = st.sidebar.number_input("Expected Annual Return (%)", value=5.0, step=0.5) / 100
+annual_return = st.sidebar.number_input("Expected Annual Return (%)", value=5.0, step=0.5)/100
 months = st.sidebar.number_input("Investment Horizon (Months)", value=120, step=12)
 target_goal = st.sidebar.number_input("Target Goal ($)", value=50000, step=1000)
 
 st.sidebar.subheader("Debt Information")
 debt_amount = st.sidebar.number_input("Debt Balance ($)", value=10000, step=500)
-debt_apr = st.sidebar.number_input("Debt APR (%)", value=18.0, step=0.5) / 100
+debt_apr = st.sidebar.number_input("Debt APR (%)", value=18.0, step=0.5)/100
 min_debt_payment = st.sidebar.number_input("Minimum Monthly Debt Payment ($)", value=200, step=50)
 extra_cash = st.sidebar.number_input("Extra Cash Available ($/month)", value=100, step=50)
 
-# ----------------------------
-# Main page logo and title
-# ----------------------------
-col1, col2 = st.columns([1, 5])
+# Main logo + title
+col1, col2 = st.columns([1,5])
 with col1:
-    st.image("logo.png", width=100)  # Main page logo
+    st.image("logo.png", width=100)
 with col2:
     st.markdown("<h1>💰 Sailo Decision Support System</h1>", unsafe_allow_html=True)
     st.markdown("Plan, optimize, and accelerate your savings goals with debt & investment insights.")
 
-# ----------------------------
 # Tabs
-# ----------------------------
 tab1, tab2 = st.tabs(["💡 Dashboard", "🎯 Personalized Recommendation"])
 
 # ----------------------------
@@ -223,3 +279,4 @@ with tab2:
     if st.button("📄 Download PDF Report"):
         pdf_buffer = generate_pdf_report(main_forecast, target_goal, debt_amount, min_debt_payment, debt_apr, extra_cash, months, monthly_contribution)
         st.download_button("Download Sailo Report", data=pdf_buffer, file_name="Sailo_Report.pdf", mime="application/pdf")
+
