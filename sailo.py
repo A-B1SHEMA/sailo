@@ -97,7 +97,7 @@ def generate_pdf_report(main_forecast, target_goal, debt_amount, min_debt_paymen
     story.append(Spacer(1, 12))
 
     # Title
-    story.append(Paragraph("💰 Sailo Decision Support Report", styles["Title"]))
+    story.append(Paragraph("💰 Sailo ", styles["Title"]))
     story.append(Spacer(1, 12))
 
     # Personalized Recommendation Metrics
@@ -171,7 +171,7 @@ col1, col2 = st.columns([1,5])
 with col1:
     st.image("logo.png", width=100)
 with col2:
-    st.markdown("<h1>💰 Sailo Decision Support System</h1>", unsafe_allow_html=True)
+    st.markdown("<h1>💰 Sailo </h1>", unsafe_allow_html=True)
     st.markdown("Plan, optimize, and accelerate your savings goals with debt & investment insights.")
 
 # Tabs
