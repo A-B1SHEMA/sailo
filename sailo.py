@@ -235,7 +235,7 @@ with tab1:
 # Tab 2: Personalized Recommendation
 # ----------------------------
 with tab2:
-    st.header("🎯 Sailo Personalized Recommendation & Analytics")
+    st.header("🎯 Sailo AI Navigator")
     final_balance = main_forecast[-1]
     total_contributions = monthly_contribution * months + starting_balance
     total_interest = final_balance - total_contributions
