@@ -85,7 +85,7 @@ with tab1:
     st.header("🔧 Inputs")
     starting_balance = st.number_input("Starting Balance ($)", min_value=0.0, value=starting_balance)
     monthly_contribution = st.number_input("Monthly Contribution ($)", min_value=0.0, value=monthly_contribution)
-    annual_return = st.slider("Expected Annual Return (%)", 0.0, 20.0, int(annual_return*100)) / 100
+    annual_return = st.slider("Expected Annual Return (%)", 0.0, 20.0, float(annual_return*100)) / 100
     target_goal = st.number_input("Target Goal ($)", min_value=1000.0, value=target_goal)
     months = st.number_input("Time Horizon (months)", min_value=1, value=months)
 
