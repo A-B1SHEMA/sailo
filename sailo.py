@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
+import plotly.express as px
 import io
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
@@ -11,57 +11,68 @@ from reportlab.lib import colors
 # Utility Functions
 # ----------------------------
 def simulate_savings(starting_balance, monthly_contribution, annual_return, months):
+    """Simple compound growth simulation"""
     balance = starting_balance
     history = []
-    for m in range(months):
+    for _ in range(months):
         balance += monthly_contribution
         balance *= (1 + annual_return / 12)
         history.append(balance)
     return history
 
-def generate_actionable_suggestions(starting_balance, monthly_contribution, annual_return, target_goal, months):
-    forecast = simulate_savings(starting_balance, monthly_contribution, annual_return, months)
-    final_balance = forecast[-1]
-    shortfall = target_goal - final_balance
-    suggestions = []
+def generate_pdf_report(main_forecast, target_goal, progress, scenario_results, scenario_inputs):
+    """Generate PDF report with results"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer)
+    styles = getSampleStyleSheet()
+    story = []
 
-    # 1️⃣ Contribution Adjustments
-    if shortfall > 0:
-        required_monthly = (target_goal - starting_balance * (1 + annual_return/12)**months) / months
-        suggestions.append(f"Increase contribution to ${required_monthly:,.2f} per month to meet your goal in {months} months.")
-    else:
-        suggestions.append("Your current plan meets or exceeds your goal. Consider keeping your contribution stable or adjusting for other goals.")
+    # Title
+    story.append(Paragraph("💰 Sailo Decision Support Report", styles["Title"]))
+    story.append(Spacer(1, 12))
 
-    # 2️⃣ Timeline Adjustments
-    if shortfall > 0:
-        reduced_months = months
-        while simulate_savings(starting_balance, monthly_contribution, annual_return, reduced_months)[-1] < target_goal:
-            reduced_months += 1
-        suggestions.append(f"Extend your timeline to {reduced_months} months to reach your goal with current contributions.")
+    # Personalized Suggestions
+    story.append(Paragraph("What You Can Do", styles["Heading2"]))
+    final_balance = main_forecast[-1]
+    story.append(Paragraph(f"Final Balance: ${final_balance:,.2f}", styles["Normal"]))
+    story.append(Paragraph(f"Target Goal: ${target_goal:,.2f}", styles["Normal"]))
+    story.append(Paragraph(f"Goal Achievement: {progress*100:.1f}%", styles["Normal"]))
+    story.append(Spacer(1, 12))
 
-    # 3️⃣ Shortfall/Surplus
-    if shortfall > 0:
-        suggestions.append(f"You are short by ${shortfall:,.2f}. Consider adjusting contributions or timeline.")
-    else:
-        suggestions.append(f"You have a surplus of ${-shortfall:,.2f}. You can save less or allocate extra to other goals.")
+    # What-If Scenarios
+    story.append(Paragraph("What-If Scenarios", styles["Heading2"]))
+    table_data = [["Scenario", "Final Balance", "Target Goal", "Achievement %"]]
+    for scenario in scenario_results:
+        target_goal = scenario_inputs[int(scenario["Scenario"][-1]) - 1]["TargetGoal"]
+        progress = scenario["FinalBalance"] / target_goal
+        table_data.append([
+            scenario["Scenario"],
+            f"${scenario['FinalBalance']:,.2f}",
+            f"${target_goal:,.2f}",
+            f"{progress*100:.1f}%"
+        ])
 
-    # 5️⃣ Milestone Suggestions
-    milestones = [0.25, 0.5, 0.75, 1.0]
-    for milestone in milestones:
-        milestone_balance = target_goal * milestone
-        month_reached = next((i+1 for i, b in enumerate(forecast) if b >= milestone_balance), None)
-        if month_reached:
-            suggestions.append(f"Milestone {int(milestone*100)}% of your goal (${milestone_balance:,.2f}) will be reached in month {month_reached}.")
+    table = Table(table_data, hAlign="LEFT")
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightblue),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+    ]))
+    story.append(table)
 
-    return suggestions
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
 
 # ----------------------------
 # Streamlit Layout
 # ----------------------------
-st.set_page_config(page_title="Sailo DSS", layout="wide")
+st.set_page_config(page_title="💰 Sailo DSS", layout="wide")
 st.title("💰 Sailo Decision Support System")
 
-# Tabs
+# Tabs: 1=Inputs, 2=What You Can Do, 3=Forecast, 4=What-If Scenario
 tab1, tab2, tab3, tab4 = st.tabs([
     "1️⃣ Inputs",
     "2️⃣ What You Can Do",
@@ -70,62 +81,81 @@ tab1, tab2, tab3, tab4 = st.tabs([
 ])
 
 # ----------------------------
-# Default Input Values
-# ----------------------------
-starting_balance = 2000.0
-monthly_contribution = 500.0
-annual_return = 0.05
-target_goal = 10000.0
-months = 12
-
-# ----------------------------
 # Tab 1: Inputs
 # ----------------------------
 with tab1:
-    st.header("🔧 Inputs")
-    starting_balance = st.number_input("Starting Balance ($)", min_value=0.0, value=starting_balance)
-    monthly_contribution = st.number_input("Monthly Contribution ($)", min_value=0.0, value=monthly_contribution)
-    annual_return = st.slider("Expected Annual Return (%)", 0.0, 20.0, float(annual_return*100)) / 100
-    target_goal = st.number_input("Target Goal ($)", min_value=1000.0, value=target_goal)
-    months = st.number_input("Time Horizon (months)", min_value=1, value=months)
+    st.header("📥 Input Your Data")
+    starting_balance = st.number_input("Starting Balance ($)", min_value=0.0, value=2000.0)
+    monthly_contribution = st.number_input("Monthly Contribution ($)", min_value=0.0, value=500.0)
+    annual_return = st.slider("Expected Annual Return (%)", 0.0, 20.0, 5.0) / 100
+    target_goal = st.number_input("Target Goal ($)", min_value=1000.0, value=10000.0)
+    months = st.number_input("Months to Forecast", min_value=1, value=12)
 
 # ----------------------------
 # Tab 2: What You Can Do
 # ----------------------------
 with tab2:
-    st.header("💡 What You Can Do")
-    suggestions = generate_actionable_suggestions(starting_balance, monthly_contribution, annual_return, target_goal, months)
-    for s in suggestions:
-        st.markdown(f"- {s}")
+    st.header("💡 Actionable Suggestions")
+    main_forecast = simulate_savings(starting_balance, monthly_contribution, annual_return, months)
+    final_balance = main_forecast[-1]
+    progress = final_balance / target_goal
+
+    # Suggest contributions adjustment
+    if progress < 1.0:
+        required_monthly = (target_goal / ((1 + annual_return/12)**months) - starting_balance) / months
+        st.info(f"Increase contribution to **${required_monthly:,.2f} per month** to meet your goal in {months} months.")
+    else:
+        st.success("You're on track! No changes needed to meet your goal.")
+
+    # Show summary
+    st.write(f"Your projected balance: **${final_balance:,.2f}**")
+    st.write(f"Target goal: **${target_goal:,.2f}**")
+    st.progress(min(progress, 1.0))
 
 # ----------------------------
 # Tab 3: Forecast
 # ----------------------------
 with tab3:
     st.header("📈 Forecast")
-    forecast = simulate_savings(starting_balance, monthly_contribution, annual_return, months)
     df_forecast = pd.DataFrame({
         "Month": list(range(1, months+1)),
-        "Projected Balance": forecast
+        "Projected Balance": main_forecast
     }).set_index("Month")
     st.line_chart(df_forecast)
-
-# Progress Bar
-    progress = forecast[-1]/target_goal
-    st.subheader("📊 Progress Toward Your Goal")
-    st.progress(min(progress, 1.0))
-    st.write(f"Projected Balance: ${forecast[-1]:,.2f} / Goal: ${target_goal:,.2f} ({progress*100:.1f}%)")
 
 # ----------------------------
 # Tab 4: What-If Scenario
 # ----------------------------
 with tab4:
     st.header("🔍 What-If Scenarios")
-    multiplier = st.slider("Adjust Forecast Multiplier", 0.5, 1.5, 1.0)
-    scenario_forecast = [x * multiplier for x in forecast]
-    df_scenario = pd.DataFrame({
-        "Month": list(range(1, months+1)),
-        "Projected Balance": scenario_forecast
-    }).set_index("Month")
-    st.line_chart(df_scenario)
+    scenario_inputs = []
+    scenario_results = []
+
+    for i in range(1, 4):
+        st.subheader(f"Scenario {i}")
+        colA, colB, colC, colD = st.columns(4)
+        with colA:
+            sb = st.number_input(f"Start (${i})", min_value=0.0, value=starting_balance, key=f"sb_{i}")
+        with colB:
+            mc = st.number_input(f"Monthly (${i})", min_value=0.0, value=monthly_contribution, key=f"mc_{i}")
+        with colC:
+            ar = st.slider(f"Return % ({i})", 0.0, 20.0, annual_return*100, key=f"ar_{i}") / 100
+        with colD:
+            tg = st.number_input(f"Goal (${i})", min_value=1000.0, value=target_goal, key=f"tg_{i}")
+
+        scenario_inputs.append({"StartingBalance": sb, "MonthlyContribution": mc, "AnnualReturn": ar, "TargetGoal": tg})
+        forecast = simulate_savings(sb, mc, ar, months)
+        scenario_results.append({"Scenario": f"Scenario {i}", "FinalBalance": forecast[-1]})
+
+    scenario_df = pd.DataFrame({
+        "Scenario": [f"Scenario {i}" for i in range(1, 4)],
+        "Final Balance": [r["FinalBalance"] for r in scenario_results],
+        "Target Goal": [si["TargetGoal"] for si in scenario_inputs],
+        "Achievement %": [r["FinalBalance"] / si["TargetGoal"] * 100 for r, si in zip(scenario_results, scenario_inputs)]
+    })
+    st.dataframe(scenario_df)
+
+    if st.button("Download PDF Report"):
+        pdf = generate_pdf_report(main_forecast, target_goal, progress, scenario_results, scenario_inputs)
+        st.download_button("Download report", data=pdf, file_name="sailo_report.pdf", mime="application/pdf")
 
