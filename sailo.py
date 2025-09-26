@@ -35,7 +35,7 @@ def generate_pdf_report(main_forecast, target_goal, debt_amount, min_debt_paymen
     story = []
 
     # Title
-    story.append(Paragraph("💰 Sailo Decision Support Report", styles["Title"]))
+    story.append(Paragraph("💰 Sailo ", styles["Title"]))
     story.append(Spacer(1, 12))
 
     # Personalized Recommendation Metrics
