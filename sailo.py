@@ -3,6 +3,10 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+import io
 
 # ----------------------------
 # Helper Functions
@@ -18,18 +22,73 @@ def simulate_debt_payoff(debt_amount, min_payment, extra_cash, debt_apr, months)
     balances = []
     debt_balance = debt_amount
     for month in range(months):
-        # Pay debt first
         if debt_balance > 0:
             interest = debt_balance * debt_apr / 12
             debt_balance = max(debt_balance + interest - (min_payment + extra_cash), 0)
         balances.append(debt_balance)
     return balances
 
+def generate_pdf_report(main_forecast, target_goal, debt_amount, min_debt_payment, debt_apr, extra_cash, months, monthly_contribution):
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer)
+    styles = getSampleStyleSheet()
+    story = []
+
+    # Title
+    story.append(Paragraph("💰 Sailo Decision Support Report", styles["Title"]))
+    story.append(Spacer(1, 12))
+
+    # Personalized Recommendation Metrics
+    final_balance = main_forecast[-1]
+    progress = final_balance / target_goal
+    deficit_or_surplus = final_balance - target_goal
+    debt_to_asset_ratio = debt_amount / final_balance if final_balance > 0 else 0
+
+    story.append(Paragraph("🎯 Personalized Recommendation", styles["Heading2"]))
+    story.append(Paragraph(f"Projected Balance: ${final_balance:,.2f}", styles["Normal"]))
+    story.append(Paragraph(f"Target Goal: ${target_goal:,.2f}", styles["Normal"]))
+    story.append(Paragraph(f"Goal Achievement: {progress*100:.1f}%", styles["Normal"]))
+    story.append(Paragraph(f"Deficit/Surplus: ${deficit_or_surplus:,.2f}", styles["Normal"]))
+    story.append(Paragraph(f"Debt-to-Asset Ratio: {debt_to_asset_ratio*100:.1f}%", styles["Normal"]))
+    story.append(Spacer(1, 12))
+
+    # Debt Metrics
+    debt_forecast = simulate_debt_payoff(debt_amount, min_debt_payment, extra_cash, debt_apr, months)
+    debt_free_month = next((i for i, v in enumerate(debt_forecast) if v <= 0), months)
+    total_interest = sum([debt_forecast[i] * debt_apr / 12 for i in range(debt_free_month)])
+    story.append(Paragraph("💳 Debt Metrics & Payoff Simulation", styles["Heading2"]))
+    story.append(Paragraph(f"Estimated months to debt-free: {debt_free_month}", styles["Normal"]))
+    story.append(Paragraph(f"Estimated interest paid: ${total_interest:,.2f}", styles["Normal"]))
+    story.append(Spacer(1, 12))
+
+    # Quick Wins & Deep Optimization
+    story.append(Paragraph("⚡ Quick Wins", styles["Heading2"]))
+    story.append(Paragraph("- Add a one-time boost to reduce timeline", styles["Normal"]))
+    story.append(Paragraph("- Cut expenses and redirect to savings", styles["Normal"]))
+    story.append(Paragraph("- Enable micro-savings (round-ups)", styles["Normal"]))
+    story.append(Paragraph("- Track progress vs peers", styles["Normal"]))
+    story.append(Spacer(1, 12))
+
+    story.append(Paragraph("🧠 Deep Optimization", styles["Heading2"]))
+    story.append(Paragraph("- Rebalance portfolio (10–15% to growth assets)", styles["Normal"]))
+    story.append(Paragraph("- Use Roth IRA/HSA for tax efficiency", styles["Normal"]))
+    story.append(Paragraph(f"- Debt Strategy: Current debt ${debt_amount:,.2f}, min payment ${min_debt_payment:,.2f}/month, APR {debt_apr*100:.1f}%", styles["Normal"]))
+    story.append(Paragraph("- Review fund expense ratios for better returns", styles["Normal"]))
+    story.append(Spacer(1, 12))
+
+    # What-If Scenario
+    story.append(Paragraph("🔮 What-If Analysis", styles["Heading2"]))
+    story.append(Paragraph(f"Extra ${extra_cash}/month could improve goal achievement.", styles["Normal"]))
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
 # ----------------------------
 # Streamlit App Layout
 # ----------------------------
-st.set_page_config(page_title="Smart Savings Dashboard", layout="wide")
-st.title("📊 Smart Savings Dashboard")
+st.set_page_config(page_title="💰 Sailo", layout="wide")
+st.title("💰 Sailo Decision Support System")
 st.markdown("Plan, optimize, and accelerate your savings goals with debt & investment insights.")
 
 # ----------------------------
@@ -57,7 +116,7 @@ tab1, tab2 = st.tabs(["💡 Dashboard", "🎯 Personalized Recommendation"])
 # Tab 1: Dashboard
 # ----------------------------
 with tab1:
-    st.header("📊 Savings & Debt Dashboard")
+    st.header("📊 Sailo Dashboard")
 
     # Forecast savings
     main_forecast = simulate_savings(starting_balance, monthly_contribution, annual_return, months)
@@ -75,43 +134,38 @@ with tab1:
         "Invest Extra": invest_forecast[1:]  # skip month 0 to align lengths
     })
 
-    # Find debt-free milestone
+    # Debt-free milestone
     debt_free_month = next((i for i, v in enumerate(debt_forecast) if v <= 0), months)
 
-    # Plot Debt vs Invest comparison chart with debt-free marker
+    # Plot Debt vs Invest comparison chart
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df_compare["Month"], y=df_compare["Debt Remaining"],
                              mode='lines', name='Debt Remaining', line=dict(color='red')))
     fig.add_trace(go.Scatter(x=df_compare["Month"], y=df_compare["Invest Extra"],
                              mode='lines', name='Invest Extra', line=dict(color='green')))
-
-    # Add vertical line for debt-free milestone
     fig.add_vline(x=debt_free_month, line_dash="dash", line_color="blue",
                   annotation_text="Debt-Free", annotation_position="top right")
-
     fig.update_layout(title="Debt vs Invest Comparison",
                       xaxis_title="Month",
                       yaxis_title="Amount ($)",
                       template="plotly_white")
     st.plotly_chart(fig, use_container_width=True)
 
-    # ----------------------------
     # Quick Wins & Deep Optimization
-    # ----------------------------
     st.subheader("⚡ Quick Wins")
     st.markdown("""
-    - 🪙 **One-Time Boost**: Add a lump sum now to reduce timeline.
-    - ✂️ **Cut Expenses**: Redirect discretionary spending to savings.
-    - 🔄 **Round-Up Auto-Save**: Enable micro-savings from daily purchases.
-    - 📊 **Peer Benchmark**: Track progress relative to similar users.
+    - 🪙 One-Time Boost
+    - ✂️ Cut Expenses
+    - 🔄 Round-Up Auto-Save
+    - 📊 Peer Benchmark
     """)
 
     st.subheader("🧠 Deep Optimization")
     st.markdown(f"""
-    - 📈 **Rebalance Portfolio**: Shift 10–15% to growth assets.
-    - 🧾 **Tax Efficiency**: Use Roth IRA/HSA for future tax savings.
-    - 💳 **Debt Strategy**: Current debt: **${debt_amount:,.2f}**, min payment: **${min_debt_payment:,.2f}/month**, APR: **{debt_apr*100:.1f}%**
-    - 💸 **Fee Scan**: Review investment fees to improve returns.
+    - 📈 Rebalance Portfolio
+    - 🧾 Tax Efficiency (Roth IRA/HSA)
+    - 💳 Debt Strategy: Current debt ${debt_amount:,.2f}, min payment ${min_debt_payment:,.2f}/month, APR {debt_apr*100:.1f}%
+    - 💸 Fee Scan
     """)
 
     # Debt metrics
@@ -127,13 +181,52 @@ with tab1:
 # Tab 2: Personalized Recommendation
 # ----------------------------
 with tab2:
-    st.header("🎯 Personalized Recommendation")
-    final_balance = main_forecast[-1]
-    progress = final_balance / target_goal
+    st.header("🎯 Sailo Personalized Recommendation & Analytics")
 
-    if progress >= 1.0:
-        st.success(f"🎉 Your projected balance **${final_balance:,.2f}** meets your goal of **${target_goal:,.2f}**.")
-    else:
-        deficit = target_goal - final_balance
-        st.warning(f"⚠️ You are projected to fall short by **${deficit:,.2f}**.")
-        st.info(f"Increase monthly contribution by **${deficit/months:,.2f}** or extend your investment horizon.")
+    final_balance = main_forecast[-1]
+    total_contributions = monthly_contribution * months + starting_balance
+    total_interest = final_balance - total_contributions
+    progress = final_balance / target_goal
+    deficit_or_surplus = final_balance - target_goal
+    debt_to_asset_ratio = debt_amount / final_balance if final_balance > 0 else 0
+
+    # Estimate months to reach goal
+    month_counter = 0
+    balance_sim = starting_balance
+    while balance_sim < target_goal and month_counter < 600:
+        balance_sim = balance_sim * (1 + annual_return / 12) + monthly_contribution
+        month_counter += 1
+    months_to_goal_current = month_counter
+
+    month_counter_extra = 0
+    balance_sim_extra = starting_balance
+    while balance_sim_extra < target_goal and month_counter_extra < 600:
+        balance_sim_extra = balance_sim_extra * (1 + annual_return / 12) + monthly_contribution + extra_cash
+        month_counter_extra += 1
+    months_to_goal_extra = month_counter_extra
+
+    # Display key metrics
+    col1, col2, col3, col4, col5 = st.columns(5)
+    col1.metric("Projected Balance", f"${final_balance:,.2f}")
+    col2.metric("Goal Progress", f"{progress*100:.1f}%")
+    col3.metric("Deficit/Surplus", f"${deficit_or_surplus:,.2f}")
+    col4.metric("Debt-to-Asset Ratio", f"{debt_to_asset_ratio*100:.1f}%")
+    col5.metric("Months to Goal", f"{months_to_goal_current} (current)")
+
+    st.subheader("🔮 What-If: Extra Contributions")
+    st.info(f"Adding extra ${extra_cash}/month could reach your goal in **{months_to_goal_extra} months** instead of {months_to_goal_current} months.")
+
+    # Contributions vs Interest visualization
+    st.subheader("💹 Contributions vs Interest")
+    df_analytics = pd.DataFrame({
+        "Type": ["Contributions", "Interest Earned"],
+        "Amount": [total_contributions, total_interest]
+    })
+    fig_analytics = px.bar(df_analytics, x="Type", y="Amount", text="Amount",
+                           color="Type", color_discrete_map={"Contributions":"blue", "Interest Earned":"green"})
+    st.plotly_chart(fig_analytics, use_container_width=True)
+
+    # PDF download button
+    if st.button("📄 Download PDF Report"):
+        pdf_buffer = generate_pdf_report(main_forecast, target_goal, debt_amount, min_debt_payment, debt_apr, extra_cash, months, monthly_contribution)
+        st.download_button("Download Sailo Report", data=pdf_buffer, file_name="Sailo_Report.pdf", mime="application/pdf")
