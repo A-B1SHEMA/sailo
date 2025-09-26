@@ -9,7 +9,7 @@ from reportlab.lib import colors
 import io
 
 # ----------------------------
-# Custom CSS for Sailo branding
+# Custom CSS for sailos branding
 # ----------------------------
 st.markdown("""
 <style>
@@ -97,7 +97,7 @@ def generate_pdf_report(main_forecast, target_goal, debt_amount, min_debt_paymen
     story.append(Spacer(1, 12))
 
     # Title
-    story.append(Paragraph("💰 Sailo ", styles["Title"]))
+    story.append(Paragraph("💰 sailos ", styles["Title"]))
     story.append(Spacer(1, 12))
 
     # Personalized Recommendation Metrics
@@ -149,7 +149,7 @@ def generate_pdf_report(main_forecast, target_goal, debt_amount, min_debt_paymen
 # ----------------------------
 # Streamlit App Layout
 # ----------------------------
-st.set_page_config(page_title="💰 Sailo", layout="wide")
+st.set_page_config(page_title="💰 sailos", layout="wide")
 
 # Sidebar with logo
 st.sidebar.image("logo.png", width=120)
@@ -171,7 +171,7 @@ col1, col2 = st.columns([1,5])
 with col1:
     st.image("logo.png", width=100)
 with col2:
-    st.markdown("<h1>💰 Sailo </h1>", unsafe_allow_html=True)
+    st.markdown("<h1>💰 sailos </h1>", unsafe_allow_html=True)
     st.markdown("Plan, optimize, and accelerate your savings goals with debt & investment insights.")
 
 # Tabs
@@ -181,7 +181,7 @@ tab1, tab2 = st.tabs(["💡 Dashboard", "🎯 Personalized Recommendation"])
 # Tab 1: Dashboard
 # ----------------------------
 with tab1:
-    st.header("📊 Sailo Dashboard")
+    st.header("📊 sailos Dashboard")
     main_forecast = simulate_savings(starting_balance, monthly_contribution, annual_return, months)
     debt_forecast = simulate_debt_payoff(debt_amount, min_debt_payment, extra_cash, debt_apr, months)
     invest_forecast = simulate_savings(starting_balance, monthly_contribution + extra_cash, annual_return, months)
@@ -235,7 +235,7 @@ with tab1:
 # Tab 2: Personalized Recommendation
 # ----------------------------
 with tab2:
-    st.header("🎯 Sailo AI Navigator")
+    st.header("🎯 sailos AI Navigator")
     final_balance = main_forecast[-1]
     total_contributions = monthly_contribution * months + starting_balance
     total_interest = final_balance - total_contributions
@@ -278,5 +278,5 @@ with tab2:
 
     if st.button("📄 Download PDF Report"):
         pdf_buffer = generate_pdf_report(main_forecast, target_goal, debt_amount, min_debt_payment, debt_apr, extra_cash, months, monthly_contribution)
-        st.download_button("Download Sailo Report", data=pdf_buffer, file_name="Sailo_Report.pdf", mime="application/pdf")
+        st.download_button("Download sailos Report", data=pdf_buffer, file_name="sailos_Report.pdf", mime="application/pdf")
 
