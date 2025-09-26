@@ -88,7 +88,7 @@ def generate_pdf_report(main_forecast, target_goal, debt_amount, min_debt_paymen
 # Streamlit App Layout
 # ----------------------------
 st.set_page_config(page_title="💰 Sailo", layout="wide")
-st.title("💰 Sailo Decision Support System")
+st.title("💰 Sailo ")
 st.markdown("Plan, optimize, and accelerate your savings goals with debt & investment insights.")
 
 # ----------------------------
@@ -181,7 +181,7 @@ with tab1:
 # Tab 2: Personalized Recommendation
 # ----------------------------
 with tab2:
-    st.header("🎯 Sailo Personalized Recommendation & Analytics")
+    st.header("🎯 Sailo Ai")
 
     final_balance = main_forecast[-1]
     total_contributions = monthly_contribution * months + starting_balance
